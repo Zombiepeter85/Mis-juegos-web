@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buscaminas Neo-Steampunk</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+
+    body {
+      background: #120e0c;
+      color: #e0cda7;
+      font-family: 'Rajdhani', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+      background-image: radial-gradient(circle at center, #2a1f1a 0%, #120e0c 100%);
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      color: #00f3ff;
+      text-shadow: 0 0 10px rgba(0, 243, 255, 0.5), 0 0 20px rgba(184, 115, 51, 0.8);
+      margin-bottom: 10px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
+
+    .header-panel {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 400px;
+      background: linear-gradient(to bottom, #3d2b1f, #221610);
+      border: 2px solid #b87333;
+      border-radius: 8px;
+      padding: 10px 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.8), inset 0 0 10px rgba(255, 170, 0, 0.2);
+    }
+
+    .header-panel div {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #00f3ff;
+      text-shadow: 0 0 8px #00f3ff;
+    }
+
+    .board-container {
+      background: #1a120e;
+      padding: 12px;
+      border: 3px solid #5c3a21;
+      border-radius: 12px;
+      box-shadow: 0 0 30px rgba(184, 115, 51, 0.3), inset 0 0 20px rgba(0,0,0,0.9);
+      position: relative;
+    }
+
+    .board {
+      display: grid;
+      gap: 2px;
+      background: #000;
+      border: 2px solid #8a5a19;
+    }
+
+    .cell {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, #b87333 0%, #8a5a19 50%, #5c3a21 100%);
+      border-top: 2px solid #e6a76a;
+      border-left: 2px solid #e6a76a;
+      border-right: 2px solid #3d2b1f;
+      border-bottom: 2px solid #3d2b1f;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 1.4rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: filter 0.2s;
+    }
+
+    .cell:hover {
+      filter: brightness(1.2);
+    }
+
+    .cell.revealed {
+      background: #2a1f1a;
+      border: 1px solid #120e0c;
+      box-shadow: inset 2px 2px 8px rgba(0,0,0,0.8);
+      cursor: default;
+    }
+
+    .cell.mine {
+      background: radial-gradient(circle, #ff3333 0%, #8a0000 100%);
+      box-shadow: 0 0 15px #ff0000;
+      border: 1px solid #ff5555;
+    }
+
+    .flag {
+      color: #00f3ff;
+      text-shadow: 0 0 10px #00f3ff;
+      font-size: 1.2rem;
+    }
+
+    /* Colores Neón Steampunk para los números */
+    .num-1 { color: #00f3ff; text-shadow: 0 0 8px #00f3ff; }
+    .num-2 { color: #55ff55; text-shadow: 0 0 8px #55ff55; }
+    .num-3 { color: #ff3366; text-shadow: 0 0 8px #ff3366; }
+    .num-4 { color: #aa55ff; text-shadow: 0 0 8px #aa55ff; }
+    .num-5 { color: #ffaa00; text-shadow: 0 0 8px #ffaa00; }
+    .num-6 { color: #00e5ff; text-shadow: 0 0 8px #00e5ff; }
+    .num-7 { color: #ff00ff; text-shadow: 0 0 8px #ff00ff; }
+    .num-8 { color: #ffffff; text-shadow: 0 0 8px #ffffff; }
+
+    .btn {
+      margin-top: 20px;
+      background: linear-gradient(45deg, #b87333, #8a5a19);
+      border: 2px solid #e6a76a;
+      color: #fff;
+      padding: 10px 25px;
+      font-family: inherit;
+      font-size: 1.2rem;
+      font-weight: 700;
+      border-radius: 5px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.6);
+      transition: all 0.2s;
+    }
+
+    .btn:hover {
+      background: linear-gradient(45deg, #00f3ff, #0088aa);
+      border-color: #00f3ff;
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(18, 14, 12, 0.85);
+      backdrop-filter: blur(3px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      z-index: 10;
+    }
+    
+    .overlay h2 {
+      font-size: 2.5rem;
+      color: #ff3333;
+      text-shadow: 0 0 15px #ff3333;
+      margin-bottom: 20px;
+    }
+
+    .overlay.win h2 {
+      color: #00f3ff;
+      text-shadow: 0 0 15px #00f3ff;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>NEO MINAS</h1>
+  
+  <div class="header-panel">
+    <div>💣 <span id="minesCount">10</span></div>
+    <div id="statusIcon">⚙️</div>
+    <div>⏱️ <span id="timer">000</span></div>
+  </div>
+
+  <div class="board-container">
+    <div id="board" class="board"></div>
+    <div id="overlay" class="overlay" style="display:none;">
+      <h2 id="endMessage">SISTEMA CRÍTICO</h2>
+      <button class="btn" onclick="initGame()">REINICIAR</button>
+    </div>
+  </div>
+
+  <button class="btn" onclick="initGame()">NUEVA PARTIDA</button>
+
+  <script>
+    const rows = 10;
+    const cols = 10;
+    const totalMines = 10;
+    
+    let grid = [];
+    let minesLeft = totalMines;
+    let revealedCount = 0;
+    let isGameOver = false;
+    let isFirstClick = true;
+    
+    let timerInterval = null;
+    let timeElapsed = 0;
+
+    const boardEl = document.getElementById('board');
+    const minesCountEl = document.getElementById('minesCount');
+    const timerEl = document.getElementById('timer');
+    const overlayEl = document.getElementById('overlay');
+    const endMessageEl = document.getElementById('endMessage');
+    const statusIconEl = document.getElementById('statusIcon');
+
+    // --- SISTEMA DE AUDIO (Web Audio API) ---
+    let audioCtx = null;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function playSound(type) {
+      if (!audioCtx) return;
+      try {
+        const t = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'reveal') {
+          // Sonido mecánico/metálico de acierto (click)
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(150, t);
+          osc.frequency.exponentialRampToValueAtTime(40, t + 0.1);
+          gain.gain.setValueAtTime(0.1, t);
+          gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+          osc.start(t);
+          osc.stop(t + 0.1);
+        } 
+        else if (type === 'flag') {
+          // Sonido ligero y agradable (campana neo/steampunk)
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(880, t); // A5
+          osc.frequency.setValueAtTime(1318.51, t + 0.05); // E6
+          gain.gain.setValueAtTime(0, t);
+          gain.gain.linearRampToValueAtTime(0.15, t + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+          osc.start(t);
+          osc.stop(t + 0.3);
+        } 
+        else if (type === 'explosion') {
+          // Ruido de explosión grave (simulado con osciladores graves y distorsión)
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(100, t);
+          osc.frequency.exponentialRampToValueAtTime(10, t + 0.5);
+          gain.gain.setValueAtTime(0.3, t);
+          gain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+          osc.start(t);
+          osc.stop(t + 0.5);
+          
+          // Ruido blanco secundario
+          const noiseOsc = audioCtx.createOscillator();
+          noiseOsc.type = 'triangle';
+          noiseOsc.frequency.setValueAtTime(50, t);
+          noiseOsc.frequency.exponentialRampToValueAtTime(1, t + 0.4);
+          const noiseGain = audioCtx.createGain();
+          noiseGain.gain.setValueAtTime(0.3, t);
+          noiseGain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+          noiseOsc.connect(noiseGain);
+          noiseGain.connect(audioCtx.destination);
+          noiseOsc.start(t);
+          noiseOsc.stop(t + 0.4);
+        }
+      } catch (e) {}
+    }
+
+    // --- LÓGICA DEL JUEGO ---
+    function initGame() {
+      boardEl.style.gridTemplateColumns = `repeat(${cols}, 38px)`;
+      boardEl.innerHTML = '';
+      grid = [];
+      minesLeft = totalMines;
+      revealedCount = 0;
+      isGameOver = false;
+      isFirstClick = true;
+      timeElapsed = 0;
+      
+      clearInterval(timerInterval);
+      updateUI();
+      overlayEl.style.display = 'none';
+      overlayEl.className = 'overlay';
+      statusIconEl.innerText = '⚙️';
+
+      // Crear matriz vacía
+      for (let r = 0; r < rows; r++) {
+        let row = [];
+        for (let c = 0; c < cols; c++) {
+          row.push({
+            r: r, c: c,
+            isMine: false,
+            isRevealed: false,
+            isFlagged: false,
+            neighborMines: 0,
+            element: null
+          });
+        }
+        grid.push(row);
+      }
+
+      // Renderizar tablero HTML
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const cellEl = document.createElement('div');
+          cellEl.classList.add('cell');
+          cellEl.addEventListener('click', () => handleLeftClick(r, c));
+          cellEl.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            handleRightClick(r, c);
+          });
+          grid[r][c].element = cellEl;
+          boardEl.appendChild(cellEl);
+        }
+      }
+    }
+
+    function placeMines(firstR, firstC) {
+      let placed = 0;
+      while (placed < totalMines) {
+        let r = Math.floor(Math.random() * rows);
+        let c = Math.floor(Math.random() * cols);
+        
+        // Evitar poner mina en el primer clic o donde ya hay
+        if (!grid[r][c].isMine && !(r === firstR && c === firstC)) {
+          grid[r][c].isMine = true;
+          placed++;
+        }
+      }
+      calculateNeighbors();
+    }
+
+    function calculateNeighbors() {
+      const dirs = [[-1,-1], [-1,0], [-1,1], [0,-1], [0,1], [1,-1], [1,0], [1,1]];
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (grid[r][c].isMine) continue;
+          let count = 0;
+          dirs.forEach(d => {
+            let nr = r + d[0], nc = c + d[1];
+            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc].isMine) {
+              count++;
+            }
+          });
+          grid[r][c].neighborMines = count;
+        }
+      }
+    }
+
+    function handleLeftClick(r, c) {
+      initAudio();
+      if (isGameOver || grid[r][c].isFlagged || grid[r][c].isRevealed) return;
+
+      if (isFirstClick) {
+        isFirstClick = false;
+        placeMines(r, c);
+        timerInterval = setInterval(() => {
+          timeElapsed++;
+          updateUI();
+        }, 1000);
+      }
+
+      if (grid[r][c].isMine) {
+        gameOver(false);
+      } else {
+        playSound('reveal');
+        revealCell(r, c);
+        checkWin();
+      }
+    }
+
+    function handleRightClick(r, c) {
+      initAudio();
+      if (isGameOver || grid[r][c].isRevealed) return;
+
+      const cell = grid[r][c];
+      cell.isFlagged = !cell.isFlagged;
+      
+      if (cell.isFlagged) {
+        playSound('flag');
+        minesLeft--;
+        cell.element.innerHTML = '<span class="flag">🚩</span>';
+      } else {
+        playSound('reveal'); // Sonido sutil al quitar
+        minesLeft++;
+        cell.element.innerHTML = '';
+      }
+      updateUI();
+    }
+
+    function revealCell(r, c) {
+      if (r < 0 || r >= rows || c < 0 || c >= cols) return;
+      const cell = grid[r][c];
+      if (cell.isRevealed || cell.isFlagged) return;
+
+      cell.isRevealed = true;
+      cell.element.classList.add('revealed');
+      revealedCount++;
+
+      if (cell.neighborMines > 0) {
+        cell.element.innerText = cell.neighborMines;
+        cell.element.classList.add(`num-${cell.neighborMines}`);
+      } else {
+        // Expansión (Flood fill)
+        const dirs = [[-1,-1], [-1,0], [-1,1], [0,-1], [0,1], [1,-1], [1,0], [1,1]];
+        dirs.forEach(d => revealCell(r + d[0], c + d[1]));
+      }
+    }
+
+    function gameOver(win) {
+      isGameOver = true;
+      clearInterval(timerInterval);
+      
+      if (win) {
+        statusIconEl.innerText = '🏆';
+        endMessageEl.innerText = '¡SISTEMA HACKEADO!';
+        overlayEl.classList.add('win');
+        overlayEl.style.display = 'flex';
+      } else {
+        playSound('explosion');
+        statusIconEl.innerText = '💥';
+        endMessageEl.innerText = 'SISTEMA CRÍTICO';
+        overlayEl.style.display = 'flex';
+        
+        // Mostrar todas las minas
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            if (grid[r][c].isMine) {
+              grid[r][c].element.classList.add('mine');
+              grid[r][c].element.innerText = '💣';
+            }
+          }
+        }
+      }
+    }
+
+    function checkWin() {
+      if (revealedCount === (rows * cols) - totalMines) {
+        gameOver(true);
+      }
+    }
+
+    function updateUI() {
+      minesCountEl.innerText = minesLeft.toString().padStart(2, '0');
+      timerEl.innerText = timeElapsed.toString().padStart(3, '0');
+    }
+
+    // Prevenir menú contextual en toda la página
+    document.addEventListener('contextmenu', event => event.preventDefault());
+
+    // Iniciar al cargar
+    initGame();
+  </script>
+</body>
+</html>

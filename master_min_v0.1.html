@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mastermind Neón</title>
+  <style>
+    :root {
+      --bg: #090b10;
+      --panel-bg: #121824;
+      --slot-empty: #1e2638;
+      --c-cyan: #00f0ff;
+      --c-magenta: #ff007f;
+      --c-lime: #39ff14;
+      --c-yellow: #ffe600;
+      --c-orange: #ff6600;
+      --c-purple: #b026ff;
+      --text: #f0f6fc;
+      --glow-blur: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      user-select: none;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1.5rem 1rem;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      text-transform: uppercase;
+      letter-spacing: 4px;
+      margin-bottom: 0.3rem;
+      background: linear-gradient(90deg, var(--c-cyan), var(--c-magenta), var(--c-yellow));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.4));
+    }
+
+    .legend {
+      display: flex;
+      gap: 1.2rem;
+      font-size: 0.85rem;
+      margin-bottom: 1.2rem;
+      color: #8b9bb4;
+      background: rgba(255,255,255,0.03);
+      padding: 0.4rem 1rem;
+      border-radius: 20px;
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mini-peg {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .mini-red { background: #ff3344; box-shadow: 0 0 6px #ff3344; }
+    .mini-white { background: #ffffff; box-shadow: 0 0 6px #ffffff; }
+
+    .game-container {
+      background: var(--panel-bg);
+      border-radius: 18px;
+      padding: 1.2rem;
+      box-shadow: 0 15px 35px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+      max-width: 440px;
+      width: 100%;
+    }
+
+    /* Tablero de intentos anteriores */
+    .board {
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 8px;
+      max-height: 480px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .board::-webkit-scrollbar {
+      width: 5px;
+    }
+    .board::-webkit-scrollbar-thumb {
+      background: #253147;
+      border-radius: 10px;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      transition: all 0.2s ease;
+    }
+
+    .row.current {
+      background: rgba(0, 240, 255, 0.06);
+      border-color: rgba(0, 240, 255, 0.3);
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.1);
+    }
+
+    .row-number {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #53627c;
+      width: 20px;
+    }
+
+    .pegs-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .slot {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--slot-empty);
+      box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.7);
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+      border: 2px solid transparent;
+    }
+
+    .current .slot.active-slot {
+      border-color: #fff;
+      box-shadow: 0 0 10px #fff;
+      transform: scale(1.08);
+    }
+
+    .hints-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 5px;
+      width: 30px;
+    }
+
+    .hint-peg {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.06);
+    }
+    .hint-peg.exact {
+      background: #ff3344;
+      box-shadow: 0 0 8px #ff3344;
+    }
+    .hint-peg.partial {
+      background: #ffffff;
+      box-shadow: 0 0 8px #ffffff;
+    }
+
+    /* Controles de selección de colores */
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 1rem;
+    }
+
+    .palette {
+      display: flex;
+      justify-content: space-around;
+      gap: 6px;
+    }
+
+    .color-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease;
+    }
+
+    .color-btn:hover {
+      transform: scale(1.15);
+    }
+
+    .color-btn:active {
+      transform: scale(0.95);
+    }
+
+    .btn-cyan    { background: var(--c-cyan);    box-shadow: 0 0 var(--glow-blur) var(--c-cyan); }
+    .btn-magenta { background: var(--c-magenta); box-shadow: 0 0 var(--glow-blur) var(--c-magenta); }
+    .btn-lime    { background: var(--c-lime);    box-shadow: 0 0 var(--glow-blur) var(--c-lime); }
+    .btn-yellow  { background: var(--c-yellow);  box-shadow: 0 0 var(--glow-blur) var(--c-yellow); }
+    .btn-orange  { background: var(--c-orange);  box-shadow: 0 0 var(--glow-blur) var(--c-orange); }
+    .btn-purple  { background: var(--c-purple);  box-shadow: 0 0 var(--glow-blur) var(--c-purple); }
+
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      border-radius: 12px;
+      border: none;
+      font-weight: 700;
+      font-size: 0.9rem;
+      letter-spacing: 1px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.2s;
+    }
+
+    .btn-submit {
+      background: linear-gradient(135deg, var(--c-cyan), #0077ff);
+      color: #050811;
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.35);
+    }
+    .btn-submit:hover:not(:disabled) {
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.6);
+      transform: translateY(-1px);
+    }
+    .btn-submit:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .btn-clear {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+    }
+    .btn-clear:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    /* Modal Fin de Juego */
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(5, 8, 16, 0.85);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: var(--panel-bg);
+      padding: 2rem;
+      border-radius: 20px;
+      text-align: center;
+      max-width: 320px;
+      width: 90%;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+      animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes pop {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .secret-code-reveal {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin: 1.5rem 0;
+    }
+
+    .restart-btn {
+      background: linear-gradient(135deg, var(--c-magenta), #9900ff);
+      color: white;
+      box-shadow: 0 0 15px rgba(255, 0, 127, 0.4);
+      width: 100%;
+    }
+    .restart-btn:hover {
+      box-shadow: 0 0 25px rgba(255, 0, 127, 0.7);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Mastermind</h1>
+
+  <div class="legend">
+    <div class="legend-item">
+      <div class="mini-peg mini-red"></div>
+      <span>Color y Posición</span>
+    </div>
+    <div class="legend-item">
+      <div class="mini-peg mini-white"></div>
+      <span>Solo Color</span>
+    </div>
+  </div>
+
+  <div class="game-container">
+    <div class="board" id="board"></div>
+
+    <div class="controls">
+      <div class="palette" id="palette"></div>
+      <div class="action-buttons">
+        <button class="btn btn-clear" id="clearBtn">Borrar</button>
+        <button class="btn btn-submit" id="submitBtn" disabled>Enviar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Victoria / Derrota -->
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h2 id="modalTitle">¡Victoria!</h2>
+      <p id="modalMsg" style="margin-top: 8px; color: #a1b0cb;"></p>
+      <div class="secret-code-reveal" id="revealCode"></div>
+      <button class="btn restart-btn" id="restartBtn">Jugar de nuevo</button>
+    </div>
+  </div>
+
+  <script>
+    // Paleta de colores neón
+    const COLORS = [
+      { id: 'cyan',    hex: '#00f0ff', class: 'btn-cyan' },
+      { id: 'magenta', hex: '#ff007f', class: 'btn-magenta' },
+      { id: 'lime',    hex: '#39ff14', class: 'btn-lime' },
+      { id: 'yellow',  hex: '#ffe600', class: 'btn-yellow' },
+      { id: 'orange',  hex: '#ff6600', class: 'btn-orange' },
+      { id: 'purple',  hex: '#b026ff', class: 'btn-purple' }
+    ];
+
+    const MAX_ATTEMPTS = 10;
+    const CODE_LENGTH = 4;
+
+    let secretCode = [];
+    let currentAttempt = 0;
+    let currentGuess = [null, null, null, null];
+    let selectedSlotIndex = 0;
+
+    // --- Audio Sintetizado (Sin archivos externos, 100% Offline) ---
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    function playBeep(freq = 440, type = 'sine', duration = 0.08) {
+      if (ctx.state === 'suspended') ctx.resume();
+      try {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function soundWin() {
+      [523, 659, 783, 1046].forEach((f, i) => {
+        setTimeout(() => playBeep(f, 'triangle', 0.25), i * 120);
+      });
+    }
+
+    function soundLose() {
+      [350, 310, 270, 220].forEach((f, i) => {
+        setTimeout(() => playBeep(f, 'sawtooth', 0.2), i * 130);
+      });
+    }
+
+    // --- Inicialización del juego ---
+    function initGame() {
+      // Generar código secreto aleatorio (permite colores repetidos)
+      secretCode = Array.from({ length: CODE_LENGTH }, () => 
+        COLORS[Math.floor(Math.random() * COLORS.length)].id
+      );
+      
+      currentAttempt = 0;
+      currentGuess = [null, null, null, null];
+      selectedSlotIndex = 0;
+
+      document.getElementById('modal').classList.remove('show');
+      buildBoard();
+      updateCurrentRowVisuals();
+    }
+
+    function buildBoard() {
+      const board = document.getElementById('board');
+      board.innerHTML = '';
+
+      for (let i = 0; i < MAX_ATTEMPTS; i++) {
+        const row = document.createElement('div');
+        row.className = `row ${i === 0 ? 'current' : ''}`;
+        row.id = `row-${i}`;
+
+        const num = document.createElement('div');
+        num.className = 'row-number';
+        num.textContent = (i + 1).toString().padStart(2, '0');
+
+        const pegsRow = document.createElement('div');
+        pegsRow.className = 'pegs-row';
+
+        for (let j = 0; j < CODE_LENGTH; j++) {
+          const slot = document.createElement('div');
+          slot.className = 'slot';
+          slot.dataset.row = i;
+          slot.dataset.col = j;
+          slot.addEventListener('click', () => {
+            if (i === currentAttempt) {
+              selectedSlotIndex = j;
+              updateCurrentRowVisuals();
+              playBeep(300, 'sine', 0.05);
+            }
+          });
+          pegsRow.appendChild(slot);
+        }
+
+        const hints = document.createElement('div');
+        hints.className = 'hints-grid';
+        for (let h = 0; h < CODE_LENGTH; h++) {
+          const hint = document.createElement('div');
+          hint.className = 'hint-peg';
+          hints.appendChild(hint);
+        }
+
+        row.appendChild(num);
+        row.appendChild(pegsRow);
+        row.appendChild(hints);
+        board.appendChild(row);
+      }
+    }
+
+    // Renderizar paleta de botones
+    const paletteContainer = document.getElementById('palette');
+    COLORS.forEach(c => {
+      const btn = document.createElement('button');
+      btn.className = `color-btn ${c.class}`;
+      btn.title = c.id;
+      btn.addEventListener('click', () => pickColor(c.id));
+      paletteContainer.appendChild(btn);
+    });
+
+    function pickColor(colorId) {
+      if (selectedSlotIndex === -1) {
+        selectedSlotIndex = currentGuess.findIndex(val => val === null);
+        if (selectedSlotIndex === -1) selectedSlotIndex = 0;
+      }
+
+      currentGuess[selectedSlotIndex] = colorId;
+      playBeep(480, 'sine', 0.06);
+
+      // Avanza al siguiente hueco vacío
+      let nextEmpty = currentGuess.findIndex((val, idx) => val === null && idx > selectedSlotIndex);
+      if (nextEmpty === -1) {
+        nextEmpty = currentGuess.findIndex(val => val === null);
+      }
+      selectedSlotIndex = nextEmpty !== -1 ? nextEmpty : (selectedSlotIndex + 1) % CODE_LENGTH;
+
+      updateCurrentRowVisuals();
+    }
+
+    function updateCurrentRowVisuals() {
+      const currentRow = document.getElementById(`row-${currentAttempt}`);
+      if (!currentRow) return;
+
+      const slots = currentRow.querySelectorAll('.slot');
+      slots.forEach((slot, idx) => {
+        const colorId = currentGuess[idx];
+        slot.classList.toggle('active-slot', idx === selectedSlotIndex);
+
+        if (colorId) {
+          const colorObj = COLORS.find(c => c.id === colorId);
+          slot.style.backgroundColor = colorObj.hex;
+          slot.style.boxShadow = `0 0 12px ${colorObj.hex}, inset 0 2px 4px rgba(255,255,255,0.4)`;
+        } else {
+          slot.style.backgroundColor = 'var(--slot-empty)';
+          slot.style.boxShadow = 'inset 0 3px 6px rgba(0, 0, 0, 0.7)';
+        }
+      });
+
+      // Botón enviar solo si están los 4 huecos llenos
+      const isComplete = currentGuess.every(c => c !== null);
+      document.getElementById('submitBtn').disabled = !isComplete;
+    }
+
+    // Botón borrar
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      currentGuess = [null, null, null, null];
+      selectedSlotIndex = 0;
+      playBeep(220, 'sine', 0.05);
+      updateCurrentRowVisuals();
+    });
+
+    // Enviar Intento y Evaluar
+    document.getElementById('submitBtn').addEventListener('click', () => {
+      if (currentGuess.includes(null)) return;
+
+      let exact = 0;
+      let partial = 0;
+
+      const codeCopy = [...secretCode];
+      const guessCopy = [...currentGuess];
+
+      // 1ª Pasada: Posición y color exactos
+      for (let i = 0; i < CODE_LENGTH; i++) {
+        if (guessCopy[i] === codeCopy[i]) {
+          exact++;
+          codeCopy[i] = null;
+          guessCopy[i] = null;
+        }
+      }
+
+      // 2ª Pasada: Color correcto pero posición errónea
+      for (let i = 0; i < CODE_LENGTH; i++) {
+        if (guessCopy[i] !== null) {
+          const matchIdx = codeCopy.indexOf(guessCopy[i]);
+          if (matchIdx !== -1) {
+            partial++;
+            codeCopy[matchIdx] = null;
+          }
+        }
+      }
+
+      // Mostrar clavijas de respuesta
+      const currentRow = document.getElementById(`row-${currentAttempt}`);
+      const hints = currentRow.querySelectorAll('.hint-peg');
+      let hIndex = 0;
+
+      for (let i = 0; i < exact; i++) hints[hIndex++].classList.add('exact');
+      for (let i = 0; i < partial; i++) hints[hIndex++].classList.add('partial');
+
+      currentRow.classList.remove('current');
+      currentRow.querySelectorAll('.slot').forEach(s => s.classList.remove('active-slot'));
+
+      // Comprobar fin de partida
+      if (exact === CODE_LENGTH) {
+        soundWin();
+        showEndModal(true);
+        return;
+      }
+
+      currentAttempt++;
+
+      if (currentAttempt >= MAX_ATTEMPTS) {
+        soundLose();
+        showEndModal(false);
+        return;
+      }
+
+      // Preparar siguiente ronda
+      playBeep(600, 'sine', 0.06);
+      currentGuess = [null, null, null, null];
+      selectedSlotIndex = 0;
+      const nextRow = document.getElementById(`row-${currentAttempt}`);
+      if (nextRow) nextRow.classList.add('current');
+      updateCurrentRowVisuals();
+    });
+
+    function showEndModal(isWin) {
+      const modal = document.getElementById('modal');
+      const title = document.getElementById('modalTitle');
+      const msg = document.getElementById('modalMsg');
+      const reveal = document.getElementById('revealCode');
+
+      title.textContent = isWin ? '¡CÓDIGO DESCIFRADO!' : 'FIN DE LA PARTIDA';
+      title.style.color = isWin ? 'var(--c-lime)' : 'var(--c-magenta)';
+      msg.textContent = isWin 
+        ? `¡Enhorabuena! Lo lograste en ${currentAttempt + 1} intentos.` 
+        : 'Te has quedado sin intentos. El código secreto era:';
+
+      reveal.innerHTML = '';
+      secretCode.forEach(cId => {
+        const col = COLORS.find(c => c.id === cId);
+        const peg = document.createElement('div');
+        peg.className = 'slot';
+        peg.style.backgroundColor = col.hex;
+        peg.style.boxShadow = `0 0 14px ${col.hex}`;
+        reveal.appendChild(peg);
+      });
+
+      modal.classList.add('show');
+    }
+
+    document.getElementById('restartBtn').addEventListener('click', initGame);
+
+    // Arrancar el juego al cargar la página
+    initGame();
+  </script>
+</body>
+</html>
